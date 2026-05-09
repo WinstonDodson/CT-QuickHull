@@ -1,0 +1,1098 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Optimal Convex Hulls for Low-Rank Data in High-Dimensional Space — Winston Dodson</title>
+<meta name="description" content="A 35-year-old algorithmic lemma turns out to be conditional independence on a DAG. CT-QuickHull achieves optimal O(nrd) for low-rank data; the limits of that claim are stated honestly throughout.">
+<meta name="author" content="Winston Dodson">
+
+<!-- Fonts: editorial serif pairing -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT@9..144,400;9..144,500;9..144,600;9..144,700;9..144,800&family=Source+Serif+4:opsz,wght@8..60,400;8..60,500;8..60,600;8..60,700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
+<style>
+:root {
+  /* Palette: Ocean Gradient (deep blue / teal / midnight) with warm amber */
+  --bg:        #FBFAF6;         /* very subtle warm off-white */
+  --bg-card:   #F4F1EA;         /* warmer card background */
+  --bg-deep:   #0B1929;         /* deep navy for hero */
+  --ink:       #1A2332;         /* body text, deep slate */
+  --ink-soft:  #4A5568;         /* secondary text */
+  --ink-mute:  #6B7280;         /* tertiary text */
+  --rule:      #D6D0C4;         /* warm rule */
+  --rule-soft: #E8E3D6;         /* lighter rule */
+  --primary:   #065A82;         /* deep ocean */
+  --secondary: #1C7293;         /* teal */
+  --midnight:  #21295C;         /* dark navy for headers */
+  --amber:     #B45309;         /* warm dark amber for caveats */
+  --amber-soft:#D9A86C;         /* lighter amber accent */
+  --ok:        #15803D;         /* confirmation green */
+  --ok-soft:   #D1FAE5;
+  --highlight: #FEF3C7;         /* subtle highlighter */
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body {
+  font-family: "Source Serif 4", Charter, "Iowan Old Style", Georgia, serif;
+  font-feature-settings: "liga" 1, "kern" 1, "onum" 1;
+  font-size: 19px;
+  line-height: 1.65;
+  color: var(--ink);
+  background: var(--bg);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* ─── HERO ───────────────────────────────────────────────────────────── */
+.hero {
+  background: var(--bg-deep);
+  color: #F4F1EA;
+  padding: 6rem 1.5rem 5rem;
+  position: relative;
+  overflow: hidden;
+}
+.hero::before {
+  content: "";
+  position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+  background:
+    radial-gradient(ellipse at 20% 30%, rgba(6, 90, 130, 0.35) 0%, transparent 50%),
+    radial-gradient(ellipse at 80% 70%, rgba(217, 168, 108, 0.10) 0%, transparent 60%);
+  pointer-events: none;
+}
+.hero-inner {
+  max-width: 740px;
+  margin: 0 auto;
+  position: relative;
+  z-index: 1;
+}
+.hero-eyebrow {
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 0.78rem;
+  font-weight: 500;
+  letter-spacing: 0.18em;
+  color: var(--amber-soft);
+  text-transform: uppercase;
+  margin-bottom: 1.75rem;
+}
+.hero-eyebrow span { color: rgba(244, 241, 234, 0.45); margin: 0 0.6em; }
+.hero h1 {
+  font-family: "Fraunces", "Source Serif 4", serif;
+  font-variation-settings: "opsz" 144, "SOFT" 30;
+  font-weight: 700;
+  font-size: clamp(2.4rem, 5.5vw, 3.8rem);
+  line-height: 1.05;
+  letter-spacing: -0.022em;
+  color: #FFFFFF;
+  margin-bottom: 1.5rem;
+}
+.hero h1 em {
+  font-style: italic;
+  font-variation-settings: "opsz" 144, "SOFT" 100;
+  color: var(--amber-soft);
+  font-weight: 600;
+}
+.hero-dek {
+  font-family: "Fraunces", serif;
+  font-variation-settings: "opsz" 24, "SOFT" 50;
+  font-style: italic;
+  font-size: 1.32rem;
+  line-height: 1.45;
+  color: rgba(244, 241, 234, 0.82);
+  max-width: 620px;
+  margin-bottom: 2.75rem;
+}
+.hero-byline {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.5rem 2.5rem;
+  font-size: 0.92rem;
+  color: rgba(244, 241, 234, 0.65);
+  padding-top: 1.5rem;
+  border-top: 1px solid rgba(217, 168, 108, 0.25);
+}
+.hero-byline strong {
+  color: rgba(244, 241, 234, 0.95);
+  font-weight: 600;
+  display: block;
+  margin-bottom: 0.15rem;
+  font-size: 0.85rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  font-family: "JetBrains Mono", monospace;
+  font-weight: 500;
+}
+.hero-byline a { color: rgba(244, 241, 234, 0.85); text-decoration: none; border-bottom: 1px solid rgba(217, 168, 108, 0.4); }
+.hero-byline a:hover { color: var(--amber-soft); }
+
+/* ─── ARTICLE ─────────────────────────────────────────────────────────── */
+article {
+  max-width: 740px;
+  margin: 0 auto;
+  padding: 5rem 1.5rem 4rem;
+}
+
+/* TL;DR box at the top of the body */
+.tldr {
+  background: #FFFFFF;
+  border: 1px solid var(--rule);
+  border-left: 3px solid var(--primary);
+  padding: 1.75rem 2rem;
+  margin-bottom: 4rem;
+  border-radius: 2px;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+}
+.tldr-label {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  color: var(--primary);
+  text-transform: uppercase;
+  margin-bottom: 0.85rem;
+}
+.tldr p {
+  font-size: 1.02rem;
+  line-height: 1.6;
+  margin: 0;
+  color: var(--ink);
+}
+.tldr p + p { margin-top: 0.7rem; }
+
+/* Section separator + heading */
+.section-mark {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 0.72rem;
+  font-weight: 500;
+  letter-spacing: 0.22em;
+  color: var(--secondary);
+  text-transform: uppercase;
+  margin-bottom: 0.7rem;
+  padding-top: 1.5rem;
+}
+h2 {
+  font-family: "Fraunces", serif;
+  font-variation-settings: "opsz" 72, "SOFT" 40;
+  font-weight: 600;
+  font-size: 2rem;
+  line-height: 1.15;
+  letter-spacing: -0.014em;
+  color: var(--midnight);
+  margin: 0 0 2rem;
+  max-width: 28ch;
+}
+h3 {
+  font-family: "Fraunces", serif;
+  font-variation-settings: "opsz" 36, "SOFT" 50;
+  font-weight: 600;
+  font-size: 1.35rem;
+  line-height: 1.25;
+  color: var(--midnight);
+  margin: 2.5rem 0 1rem;
+}
+
+p { margin-bottom: 1.4rem; }
+
+/* Drop cap on lead paragraph */
+.lead {
+  font-size: 1.18rem;
+  line-height: 1.55;
+  color: var(--ink);
+}
+.lead::first-letter {
+  font-family: "Fraunces", serif;
+  font-variation-settings: "opsz" 144, "SOFT" 100;
+  font-weight: 700;
+  font-size: 4.5rem;
+  line-height: 0.85;
+  float: left;
+  margin: 0.35rem 0.7rem -0.2rem -0.1rem;
+  color: var(--midnight);
+}
+
+/* Inline elements */
+strong { font-weight: 600; color: var(--midnight); }
+em { font-style: italic; }
+a { color: var(--primary); text-decoration: none; border-bottom: 1px solid rgba(6, 90, 130, 0.3); transition: color 0.15s; }
+a:hover { color: var(--amber); border-bottom-color: var(--amber); }
+
+/* Code & math */
+code, .formula {
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 0.92em;
+  font-weight: 500;
+  background: var(--bg-card);
+  padding: 0.15em 0.4em;
+  border-radius: 2px;
+  color: var(--midnight);
+}
+.formula-block {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 1.15rem;
+  font-weight: 500;
+  background: var(--midnight);
+  color: #FFFFFF;
+  padding: 1.6rem 1.8rem;
+  margin: 2rem 0;
+  border-radius: 2px;
+  text-align: center;
+  letter-spacing: 0.01em;
+  line-height: 1.5;
+  box-shadow: 0 4px 12px rgba(33, 41, 92, 0.15);
+  position: relative;
+}
+.formula-block .formula-label {
+  display: block;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 0.7rem;
+  font-weight: 500;
+  letter-spacing: 0.18em;
+  color: var(--amber-soft);
+  text-transform: uppercase;
+  margin-bottom: 0.85rem;
+  text-align: left;
+}
+.formula-block .formula-note {
+  display: block;
+  font-family: "Source Serif 4", serif;
+  font-style: italic;
+  font-size: 0.92rem;
+  font-weight: 400;
+  color: rgba(255, 255, 255, 0.6);
+  margin-top: 1rem;
+  text-align: center;
+  letter-spacing: 0;
+}
+
+/* Pull quote — used for the structural insight */
+.pull {
+  font-family: "Fraunces", serif;
+  font-variation-settings: "opsz" 60, "SOFT" 80;
+  font-style: italic;
+  font-size: 1.5rem;
+  line-height: 1.35;
+  color: var(--midnight);
+  margin: 2.5rem -1rem;
+  padding: 0 1rem 0 1.5rem;
+  border-left: 3px solid var(--amber-soft);
+  letter-spacing: -0.005em;
+}
+
+/* Caveat callout — amber bordered, used for §9.1 */
+.caveat {
+  background: #FFFBEB;
+  border: 1px solid #FDE68A;
+  border-left: 3px solid var(--amber);
+  padding: 1.5rem 1.75rem;
+  margin: 2rem 0;
+  border-radius: 2px;
+}
+.caveat-label {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  color: var(--amber);
+  text-transform: uppercase;
+  margin-bottom: 0.85rem;
+}
+.caveat p { margin-bottom: 0.85rem; font-size: 0.98rem; line-height: 1.55; }
+.caveat p:last-child { margin-bottom: 0; }
+.caveat strong { color: var(--amber); }
+
+/* Insight callout — primary bordered, used for universal structural facts */
+.insight {
+  background: #FFFFFF;
+  border: 1px solid var(--rule-soft);
+  border-left: 3px solid var(--secondary);
+  padding: 1.5rem 1.75rem;
+  margin: 2rem 0;
+  border-radius: 2px;
+}
+.insight-label {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  color: var(--secondary);
+  text-transform: uppercase;
+  margin-bottom: 0.85rem;
+}
+.insight p { margin-bottom: 0.85rem; font-size: 0.98rem; line-height: 1.55; }
+.insight p:last-child { margin-bottom: 0; }
+
+/* Tables */
+.table-wrap {
+  margin: 2.5rem -1rem;
+  overflow-x: auto;
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.95rem;
+  font-family: "Source Serif 4", serif;
+}
+table caption {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  color: var(--secondary);
+  text-transform: uppercase;
+  text-align: left;
+  margin-bottom: 0.75rem;
+  padding: 0 1rem;
+}
+th, td {
+  padding: 0.7rem 1rem;
+  text-align: left;
+  border-bottom: 1px solid var(--rule-soft);
+}
+thead th {
+  font-family: "Fraunces", serif;
+  font-weight: 600;
+  font-size: 0.88rem;
+  color: var(--midnight);
+  letter-spacing: -0.005em;
+  border-bottom: 2px solid var(--midnight);
+  text-transform: none;
+}
+tbody td.num {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 0.88rem;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+}
+tbody td.center { text-align: center; }
+tbody td.ok { color: var(--ok); font-weight: 600; }
+tbody tr:hover { background: var(--bg-card); }
+
+/* The "by scope" three-column summary */
+.scope-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1.25rem;
+  margin: 2.5rem -1rem;
+}
+@media (min-width: 720px) {
+  .scope-grid { grid-template-columns: repeat(3, 1fr); }
+}
+.scope-card {
+  background: #FFFFFF;
+  border: 1px solid var(--rule-soft);
+  padding: 1.5rem 1.4rem 1.6rem;
+  border-radius: 2px;
+}
+.scope-card.universal   { border-top: 3px solid var(--primary); }
+.scope-card.scoped      { border-top: 3px solid var(--midnight); }
+.scope-card.conjectural { border-top: 3px solid var(--amber); }
+.scope-card-tag {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  margin-bottom: 0.8rem;
+}
+.universal   .scope-card-tag { color: var(--primary); }
+.scoped      .scope-card-tag { color: var(--midnight); }
+.conjectural .scope-card-tag { color: var(--amber); }
+.scope-card h4 {
+  font-family: "Fraunces", serif;
+  font-variation-settings: "opsz" 24, "SOFT" 50;
+  font-weight: 600;
+  font-size: 1.05rem;
+  color: var(--midnight);
+  margin-bottom: 1rem;
+  line-height: 1.25;
+}
+.scope-card ul { list-style: none; }
+.scope-card li {
+  font-size: 0.92rem;
+  line-height: 1.5;
+  padding-left: 1.1rem;
+  position: relative;
+  margin-bottom: 0.6rem;
+}
+.scope-card li::before {
+  content: "·";
+  position: absolute;
+  left: 0;
+  font-weight: 700;
+  color: var(--ink-mute);
+}
+
+/* Section divider */
+.divider {
+  margin: 4.5rem 0 0;
+  text-align: center;
+  border: none;
+  height: 1px;
+  background: var(--rule);
+  position: relative;
+}
+.divider::after {
+  content: "❋";
+  position: absolute;
+  top: -0.85rem;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--bg);
+  padding: 0 1.4rem;
+  font-family: "Fraunces", serif;
+  font-size: 1.1rem;
+  color: var(--amber-soft);
+  letter-spacing: 0;
+}
+
+/* Inline list */
+ul.prose-list {
+  margin: 0 0 1.4rem 1.5rem;
+  list-style: none;
+}
+ul.prose-list li {
+  position: relative;
+  padding-left: 1rem;
+  margin-bottom: 0.6rem;
+  line-height: 1.55;
+}
+ul.prose-list li::before {
+  content: "—";
+  position: absolute;
+  left: -0.4rem;
+  color: var(--amber-soft);
+  font-weight: 600;
+}
+
+/* Footer / colophon */
+.colophon {
+  margin-top: 5rem;
+  padding-top: 2.5rem;
+  border-top: 1px solid var(--rule);
+  font-size: 0.92rem;
+  color: var(--ink-soft);
+}
+.colophon-title {
+  font-family: "Fraunces", serif;
+  font-weight: 600;
+  font-size: 1.4rem;
+  color: var(--midnight);
+  margin-bottom: 1.5rem;
+}
+.colophon dl {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 0.5rem 1.5rem;
+  margin-bottom: 1.5rem;
+}
+.colophon dt {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 0.78rem;
+  font-weight: 500;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--ink-mute);
+  padding-top: 0.1rem;
+}
+.colophon dd { color: var(--ink); }
+.colophon a { word-break: break-word; }
+.signoff {
+  margin-top: 2rem;
+  padding-top: 1.5rem;
+  border-top: 1px dashed var(--rule);
+  font-size: 0.82rem;
+  color: var(--ink-mute);
+  font-style: italic;
+}
+
+/* Small responsive tweaks */
+@media (max-width: 640px) {
+  body { font-size: 17.5px; }
+  .hero { padding: 4rem 1.25rem 3rem; }
+  article { padding: 3rem 1.25rem 3rem; }
+  .pull { margin-left: 0; margin-right: 0; font-size: 1.3rem; padding-left: 1.1rem; }
+  .table-wrap, .scope-grid { margin-left: 0; margin-right: 0; }
+  .formula-block { padding: 1.3rem 1rem; font-size: 1rem; }
+  .lead::first-letter { font-size: 3.6rem; margin: 0.3rem 0.5rem -0.1rem -0.05rem; }
+  table { font-size: 0.88rem; }
+  th, td { padding: 0.55rem 0.6rem; }
+}
+</style>
+</head>
+<body>
+
+<!-- ════════════════════════════ HERO ════════════════════════════ -->
+<header class="hero">
+  <div class="hero-inner">
+    <div class="hero-eyebrow">
+      Preprint <span>·</span> April 2026 <span>·</span> CC BY 4.0
+    </div>
+    <h1>Optimal Convex Hulls for <em>Low-Rank</em> Data in High-Dimensional Space</h1>
+    <p class="hero-dek">
+      A 35-year-old algorithmic lemma turns out to be conditional independence on a DAG.
+      Here is what that buys you — and what it doesn&rsquo;t.
+    </p>
+    <div class="hero-byline">
+      <div>
+        <strong>Author</strong>
+        Winston Dodson
+      </div>
+      <div>
+        <strong>Affiliation</strong>
+        Independent Researcher
+      </div>
+      <div>
+        <strong>ORCID</strong>
+        <a href="https://orcid.org/0009-0001-7148-0764">0009-0001-7148-0764</a>
+      </div>
+      <div>
+        <strong>DOI</strong>
+        10.5281/zenodo.XXXXXXX
+      </div>
+    </div>
+  </div>
+</header>
+
+<!-- ════════════════════════════ ARTICLE ════════════════════════════ -->
+<article>
+
+  <!-- TL;DR — the scope statement up front -->
+  <div class="tldr">
+    <div class="tldr-label">TL;DR &mdash; Scope, stated up front</div>
+    <p>
+      For data with intrinsic rank <em>r</em> &lt;&lt; <em>d</em>, CT-QuickHull computes the exact convex hull
+      in <code>O(nrd)</code> &mdash; matching the unconditional lower bound <code>&Omega;(nrd)</code>.
+      That is optimal in this regime.
+    </p>
+    <p>
+      For full-rank or adversarial high-dimensional data, the algorithm <em>matches</em> the asymptotic
+      complexity of existing methods rather than improving over them. The structural contribution &mdash;
+      recognizing the Heritage Lemma as <em>d</em>-separation on an event DAG &mdash; is universal and
+      independent of data rank.
+    </p>
+  </div>
+
+  <!-- ─── §1: THE PROBLEM ───────────────────────────────────────────── -->
+  <section>
+    <div class="section-mark">§ 1 &mdash; The problem</div>
+    <h2>Convex hulls are tractable in low dimensions. In high <em>d</em>, they are not &mdash; without structure.</h2>
+
+    <p class="lead">
+      A convex hull is the smallest convex shape that encloses a set of points. In two dimensions, it is the rubber band
+      you would stretch around a scatter of pins. In ten dimensions, fifty, a hundred &mdash; the same idea, just much harder
+      to compute. And in the worst case, much harder than &ldquo;hard&rdquo;: actually intractable.
+    </p>
+
+    <p>
+      The barrier is the <strong>Upper Bound Theorem</strong>, proved by McMullen in 1970. A polytope with <em>n</em>
+      vertices in <em>d</em>-dimensional space can have up to <code>&Theta;(n<sup>&lfloor;d/2&rfloor;</sup>)</code> faces.
+      This is not a worst-case conjecture &mdash; it is tight, achieved by specific constructions called cyclic polytopes.
+      Algorithms that examine each face per update step incur cost exponential in <em>d</em>, and they have no way around it.
+    </p>
+
+    <p>
+      Concretely: at <em>n</em>&nbsp;=&nbsp;<em>d</em>&nbsp;=&nbsp;100, the worst-case face count is around 10<sup>100</sup>.
+      No conceivable hardware addresses that. The exact convex hull problem in high dimensions has sat in the
+      &ldquo;intractable&rdquo; pile for half a century.
+    </p>
+
+    <p>
+      Most write-ups of this story stop here, then introduce a method, then claim some kind of breakthrough. The honest
+      version requires one more step before the breakthrough: <em>what kind of data are we actually computing hulls of?</em>
+    </p>
+
+    <p>
+      Real-world high-dimensional datasets &mdash; single-cell genomics readouts, NLP embeddings, sensor arrays, image
+      features &mdash; almost never have full rank in their ambient space. The intrinsic dimension of the data, the <em>r</em>
+      in <em>r</em>-dimensional affine subspace where the points actually live, is typically far smaller than the ambient <em>d</em>.
+      The right question is not
+    </p>
+
+    <p class="pull">
+      &ldquo;Can we compute exact convex hulls in high <em>d</em>?&rdquo;
+    </p>
+
+    <p>but rather</p>
+
+    <p class="pull">
+      &ldquo;Can we compute exact convex hulls in high <em>d</em> when the data has <em>low-rank affine structure</em>?&rdquo;
+    </p>
+
+    <p>
+      That second question is the one CT-QuickHull answers. The first one, in its full generality, it does not.
+      Holding that distinction firmly in mind is the difference between an honest result and an overstated one.
+    </p>
+  </section>
+
+  <hr class="divider">
+
+  <!-- ─── §2: THE STRUCTURAL INSIGHT ─────────────────────────────────── -->
+  <section>
+    <div class="section-mark">§ 2 &mdash; The structural insight</div>
+    <h2>The Heritage Lemma (1989) is a <em>d</em>-separation statement on an event DAG.</h2>
+
+    <p>
+      In 1989, Clarkson and Shor published a paper on randomised geometric algorithms with a lemma that has been
+      sitting in the computational geometry literature for thirty-five years. Paraphrased:
+    </p>
+
+    <p class="pull">
+      When a new hull facet &tau; is created, only points already conflicting with &tau;&rsquo;s parents in the deletion
+      history need to be checked. All other points are irrelevant.
+    </p>
+
+    <p>
+      Clarkson and Shor used this to bound expected running times in randomised incremental construction.
+      It is a useful algorithmic fact. What we noticed &mdash; and what makes the rest of this work possible &mdash;
+      is that it is also something else.
+    </p>
+
+    <p>
+      In the language of probabilistic graphical models, the Heritage Lemma is a <strong>conditional independence statement
+      on a directed acyclic graph</strong>. The deletion history of the hull is a DAG. A new facet &tau; is conditionally
+      independent of all points outside its parents&rsquo; conflict sets, given the parents themselves. That is the
+      definition of <em>d</em>-separation. The Heritage Lemma is the certificate of conditional independence at each
+      facet-creation event in the DAG.
+    </p>
+
+    <p>
+      If you have worked with Bayesian networks, sparse linear algebra, or message-passing algorithms, you have seen
+      this pattern before. The same structure appears across multiple fields:
+    </p>
+
+    <ul class="prose-list">
+      <li>
+        In <strong>belief propagation</strong> on Bayesian networks, messages flow only along graph edges to causally
+        connected nodes. Nodes <em>d</em>-separated from an observation receive no message and need no update.
+      </li>
+      <li>
+        In <strong>sparse Gaussian elimination</strong>, eliminating a pivot updates only rows and columns that share
+        a non-zero with it. Zero entries are <em>d</em>-separated from the pivot in the elimination tree, and no
+        computation touches them.
+      </li>
+      <li>
+        In <strong>kinetic data structures</strong>, certificate updates after a geometric change are restricted to
+        certificates involving the changed element &mdash; the rest are guaranteed unaffected.
+      </li>
+    </ul>
+
+    <p>
+      The Heritage Lemma is the convex hull instance of this same principle. The
+      <strong>Conflict Tree (CT)</strong> &mdash; the ancestry DAG of the hull construction, with leaves as current facets
+      and edges as replacement history &mdash; is the graphical model. Every <code>CT.update</code> operation is one
+      message-passing step on it.
+    </p>
+
+    <p>
+      None of these connections required new mathematics. They required noticing that the Heritage Lemma, the elimination
+      tree, and the d-separation property in graphical models are all describing the same underlying structure
+      from different angles.
+    </p>
+  </section>
+
+  <hr class="divider">
+
+  <!-- ─── §3: LEMMA 3 (UNIVERSAL) ───────────────────────────────────── -->
+  <section>
+    <div class="section-mark">§ 3 &mdash; The mechanism</div>
+    <h2>Lemma 3: per-step cost severed from the global facet count.</h2>
+
+    <p>
+      Once you see the Heritage Lemma as <em>d</em>-separation, the algorithm design becomes mechanical. CT-QuickHull
+      pairs <strong>QuickHull&rsquo;s farthest-point selection</strong> &mdash; which, by a Rockafellar-style separation
+      argument, guarantees every selected point is a true hull vertex &mdash; with the CT for hull updates.
+      QuickHull picks the next vertex; the CT updates the hull using only Heritage-certified conflict candidates,
+      never touching points outside the parents&rsquo; conflict sets.
+    </p>
+
+    <p>
+      The resulting per-step cost is the technical heart of the paper:
+    </p>
+
+    <div class="formula-block">
+      <span class="formula-label">Lemma 3 &mdash; Facet Count Independence</span>
+      Cost of CT.update(v) = O ( |C<sub>vis</sub>| &middot; |&part;Vis(v)| &middot; d )
+      <span class="formula-note">The global current-facet count |F<sub>t</sub>| does not appear.</span>
+    </div>
+
+    <p>
+      The Upper Bound Theorem governs |F<sub>t</sub>| globally &mdash; that exponential factor is real, and no bookkeeping
+      trick removes it from the total face count of the hull. What Lemma 3 does is sever it from the <em>per-step cost</em>.
+      The work performed at each insertion depends on the local conflict sets and the horizon size, not on how many
+      facets the current hull happens to have.
+    </p>
+
+    <div class="insight">
+      <div class="insight-label">Universal contribution</div>
+      <p>
+        Lemma 3 holds for <strong>any data</strong>, regardless of intrinsic rank. The structural improvement is real
+        on full-rank data, on adversarial geometry, on noisy data, on anything. Whenever pruning reduces |E<sub>t</sub>|,
+        CT-QuickHull&rsquo;s selection cost is strictly less than that of conflict-graph randomised incremental construction.
+      </p>
+    </div>
+
+    <p>
+      But Lemma 3 alone does not yield the headline complexity result. It removes |F<sub>t</sub>| from the per-step
+      cost, not from the total. On data without low-rank structure, F<sub>total</sub> &mdash; the total number of facets
+      ever created over the construction&rsquo;s lifetime &mdash; can still be exponential in <em>d</em>, and the
+      asymptotic order of the algorithm matches existing methods.
+    </p>
+
+    <p>
+      The tractability story requires more, and that more is a property of the data, not of the algorithm.
+    </p>
+  </section>
+
+  <hr class="divider">
+
+  <!-- ─── §4: THEOREM 2 (RANK-r SCOPED) ─────────────────────────────── -->
+  <section>
+    <div class="section-mark">§ 4 &mdash; The rank-<em>r</em> result</div>
+    <h2>Theorem 2: For data with intrinsic rank <em>r</em> &lt;&lt; <em>d</em>, CT-QuickHull is optimal.</h2>
+
+    <p>
+      For data lying in an <em>r</em>-dimensional affine subspace embedded in &#8477;<sup>d</sup>, three facts from
+      Carath&eacute;odory&rsquo;s theorem combine to give a tight result. Each is an <em>O(1)</em> bound for fixed <em>r</em>:
+    </p>
+
+    <ul class="prose-list">
+      <li><strong>Step count.</strong> The hull has at most <em>r&nbsp;+&nbsp;1</em> vertices.</li>
+      <li><strong>Hull faces.</strong> |F<sub>t</sub>| = <em>O(1)</em> for fixed <em>r</em>.</li>
+      <li><strong>Horizon size.</strong> |&part;Vis(v<sub>t</sub>)| = <em>O(1)</em>, bounded by |F<sub>t</sub>|.</li>
+    </ul>
+
+    <p>
+      These three <em>O(1)</em> facts collapse the output-sensitive formula of Theorem 1 to:
+    </p>
+
+    <div class="formula-block">
+      <span class="formula-label">Theorem 2 &mdash; Primary Result</span>
+      O(nrd)  =  &Omega;(nrd)
+      <span class="formula-note">Tight: matches the unconditional lower bound for any deterministic exact hull algorithm on rank-<em>r</em> data.</span>
+    </div>
+
+    <p>
+      <strong>What the rank-<em>r</em> assumption is doing</strong>: it asserts that the data lives in a low-dimensional
+      affine subspace embedded in the high-dimensional ambient space. This is a real assumption about the data, not a
+      property of the algorithm. When it holds &mdash; and for many natural high-dimensional datasets it does &mdash;
+      CT-QuickHull achieves the unconditional lower bound. When it does not, the algorithm still runs, still produces
+      the exact hull, but its asymptotic complexity is no better than alternatives.
+    </p>
+
+    <p>
+      Honest framing: this is a tractability result for low-rank-structured high-dimensional data, not a tractability
+      result for high-dimensional data in general.
+    </p>
+  </section>
+
+  <hr class="divider">
+
+  <!-- ─── §5: EXPERIMENTAL VALIDATION ──────────────────────────────── -->
+  <section>
+    <div class="section-mark">§ 5 &mdash; Empirical validation</div>
+    <h2>All five theoretical predictions confirmed on synthetic rank-<em>r</em> data.</h2>
+
+    <p>
+      We built the algorithm, ran it on synthetic rank-<em>r</em> data with known ground truth, and verified every
+      prediction the theory makes. The primary experiment: <em>n</em>&nbsp;=&nbsp;100 points in &#8477;<sup>100</sup>,
+      lying in a 10-dimensional affine subspace, with 11 planted simplex vertices known by construction.
+    </p>
+
+    <div class="table-wrap">
+      <table>
+        <caption>Primary experiment: <em>n</em> = 100, <em>d</em> = 100, <em>r</em> = 10</caption>
+        <thead>
+          <tr>
+            <th>Prediction</th>
+            <th>Observed</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td>Step count <em>h</em> = <em>r</em> + 1 = 11</td><td class="ok">11 &check;</td></tr>
+          <tr><td>All 11 hull vertices found</td><td class="ok">exact match &check;</td></tr>
+          <tr><td>Max |&part;Vis| &le; <em>r</em> = 10</td><td class="ok">10 &check;</td></tr>
+          <tr><td>Final |E<sub>t</sub>| = 0</td><td class="ok">0 (mass pruning at step 11) &check;</td></tr>
+          <tr><td>Selection ops &asymp; <em>O</em>(<em>nrd</em>) = 100,000</td><td class="ok">104,500 (1.04&times;) &check;</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <p>
+      The most striking phenomenon is <strong>mass pruning</strong>: the 89 interior points are not eliminated gradually
+      across the construction. They are pruned <em>simultaneously, at the final step</em>, when the hull spans the full
+      10-dimensional subspace. Before then, interior points have positive residual from the partial affine hull and
+      remain in the exterior set. At step 11, the affine span covers all of &#8477;<sup>r</sup> and every interior point
+      &mdash; at the same instant &mdash; has zero residual and is removed.
+    </p>
+
+    <p>
+      This is not an artefact of the implementation. It is a geometric property of rank-<em>r</em> data, and it is the
+      operational mechanism behind Corollary 3 (Pruning Amplification) which formalises when CT-QuickHull&rsquo;s
+      improvement over RIC is large.
+    </p>
+
+    <p>
+      The <em>r</em>-scaling experiment confirms the complexity prediction holds across a range of intrinsic dimensions:
+    </p>
+
+    <div class="table-wrap">
+      <table>
+        <caption><em>r</em>-scaling: <em>n</em> = 100, <em>d</em> = 100, varying <em>r</em></caption>
+        <thead>
+          <tr>
+            <th><em>r</em></th>
+            <th class="center">Steps found</th>
+            <th class="center">Expected (<em>r</em>+1)</th>
+            <th style="text-align:right">Total ops</th>
+            <th class="center">Ratio / <em>O</em>(<em>nrd</em>)</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td><em>2</em></td>  <td class="center">3</td>  <td class="center">3</td>  <td class="num">69,200</td>     <td class="center">3.46&times;</td></tr>
+          <tr><td><em>5</em></td>  <td class="center">6</td>  <td class="center">6</td>  <td class="num">213,000</td>    <td class="center">4.26&times;</td></tr>
+          <tr><td><em>10</em></td> <td class="center">11</td> <td class="center">11</td> <td class="num">626,000</td>    <td class="center">6.26&times;</td></tr>
+          <tr><td><em>15</em></td> <td class="center">16</td> <td class="center">16</td> <td class="num">1,234,000</td>  <td class="center">8.23&times;</td></tr>
+          <tr><td><em>20</em></td> <td class="center">21</td> <td class="center">21</td> <td class="num">2,012,000</td>  <td class="center">10.06&times;</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <p>
+      The ratio scales linearly with <em>r</em> &mdash; an <em>O</em>(<em>r</em>) hidden constant in the leading term,
+      consistent with theory. Selection alone tracks <em>O</em>(<em>nrd</em>) at 1.04&times; uniformly; the <em>O</em>(<em>r</em>)
+      overhead comes from CT.update at the final step where |&part;Vis| reaches <em>r</em>. Every correctness check passes.
+    </p>
+
+    <p>
+      The full Colab notebook runs the entire smoke test &mdash; five checks, all passing &mdash; in under five seconds.
+    </p>
+  </section>
+
+  <hr class="divider">
+
+  <!-- ─── §6: WHAT IS NOT CLAIMED ──────────────────────────────────── -->
+  <section>
+    <div class="section-mark">§ 6 &mdash; What is not claimed</div>
+    <h2>Scope honesty: full-rank and adversarial geometry remain hard.</h2>
+
+    <p>
+      I want to be precise about the limits of the result, because the contribution is more credible when its scope
+      is stated than when it is implied. Section 9.1 of the paper is explicit on these points; the blog post should be too.
+    </p>
+
+    <div class="caveat">
+      <div class="caveat-label">From § 9.1 of the paper</div>
+      <p>
+        <strong>Adversarial geometry (cyclic polytopes).</strong> On cyclic polytopes in &#8477;<sup>d</sup>,
+        the horizon size |&part;Vis(v<sub>t</sub>)| can be <code>&Theta;(|Vis|<sup>(d-2)/(d-1)</sup>)</code>,
+        which becomes large. Total CT cost is <code>O(d &middot; n &middot; F<sub>total</sub>)</code> &le;
+        <code>O(n<sup>1+&lfloor;d/2&rfloor;</sup> &middot; d)</code>. Asymptotic order matches RIC; CT improves only by
+        the per-step factor |E<sub>t</sub>|/<em>n</em> and the step-count factor <em>h</em>/<em>n</em>.
+      </p>
+      <p>
+        <strong>Spherical shell / general position.</strong> For <em>n</em> points on the unit sphere in general
+        position with no <em>d</em>+1 in a common hyperplane, every point is a hull vertex
+        (<em>h</em>&nbsp;=&nbsp;<em>n</em>) and |E<sub>t</sub>| stays roughly <em>n</em> throughout. Selection alone
+        is <code>O(n<sup>2</sup>d)</code>; CT.update adds <code>O(d &middot; n &middot; F<sub>total</sub>)</code>.
+        For <em>d</em>&nbsp;&ge;&nbsp;4, no asymptotic improvement over RIC.
+      </p>
+      <p>
+        <strong>Comparison scope.</strong> Theorems 3 and 4 compare against <em>conflict-graph</em> RIC.
+        Heritage-recursive QuickHull implementations already use conflict locality; CT-QuickHull&rsquo;s advantage
+        over those is the <em>h</em>/<em>n</em> step-count reduction from guaranteed-vertex selection &mdash; not
+        an asymptotic regime change.
+      </p>
+    </div>
+
+    <p>
+      None of this diminishes the rank-<em>r</em> result. It locates the result correctly: as a tractability claim
+      for data with low-rank affine structure, with the rest of the high-dimensional convex hull problem still
+      unresolved by this work.
+    </p>
+  </section>
+
+  <hr class="divider">
+
+  <!-- ─── §7: CSS FRAMEWORK ────────────────────────────────────────── -->
+  <section>
+    <div class="section-mark">§ 7 &mdash; The exportable paradigm</div>
+    <h2>Causal Sparsity System: a framework beyond convex hulls.</h2>
+
+    <p>
+      The mechanism here &mdash; replacing a global combinatorial update with a message-passing step on a causal
+      ancestry DAG, justified by a conditional-independence property at the event boundary &mdash; is not specific
+      to convex hull construction. We formalise it as a <strong>Causal Sparsity System</strong> (CSS), a tuple
+      <code>(&Sigma;, &Eopf;, G, &Hopf;)</code> with:
+    </p>
+
+    <ul class="prose-list">
+      <li><strong>&Sigma;</strong>: a state space &mdash; combinatorial objects with associated conflict sets.</li>
+      <li><strong>&Eopf;</strong>: an event sequence &mdash; each event deletes some objects and creates new ones.</li>
+      <li><strong>G</strong>: an event DAG &mdash; recording the ancestry of object creation.</li>
+      <li><strong>&Hopf;</strong>: a Heritage condition &mdash; the conditional independence certificate at event boundaries.</li>
+    </ul>
+
+    <p>
+      The CSS complexity formula is:
+    </p>
+
+    <div class="formula-block">
+      <span class="formula-label">Theorem 0 &mdash; CSS Complexity</span>
+      T = O ( c<sub>test</sub> &middot; &Sigma;<sub>t</sub> |S<sub>t</sub>| &middot; &delta;<sub>t</sub> )
+      <span class="formula-note">Proved for the convex hull instance via Lemmas 3 and 5. Conjectural in full generality.</span>
+    </div>
+
+    <p>
+      This replaces the naive <code>O(c<sub>test</sub> &middot; n &middot; F<sub>total</sub>)</code> with a formula
+      that scales by causal connectivity rather than global structure size. CT-QuickHull is one CSS instance.
+      We conjecture &mdash; and this is open work &mdash; that the same paradigm applies to several other domains
+      where an analogous Heritage-type condition is present:
+    </p>
+
+    <ul class="prose-list">
+      <li>
+        <strong>Delaunay triangulation.</strong> The cavity of violated triangles when a new point is inserted
+        plays the role of Vis(v); the Heritage condition is that points outside the circumspheres of cavity boundary
+        triangles are irrelevant to the new triangles. Conjectured: <em>O</em>(<em>ndr</em>) for rank-<em>r</em> point sets.
+      </li>
+      <li>
+        <strong>Hyperplane arrangements.</strong> The Zone Theorem bounds the cells intersected by a new hyperplane;
+        zone = Vis(v); Zone Theorem = Heritage condition. The CSS update would restrict to zone ancestry.
+      </li>
+      <li>
+        <strong>Sparse matrix refactorisation.</strong> The elimination tree records which columns require update
+        after a rank-1 modification. Columns outside the elimination subtree of the modified entry need no update.
+        The elimination tree is the CT for linear algebra; fill-in sparsity is the Heritage Lemma.
+      </li>
+    </ul>
+
+    <p>
+      These are conjectures, not claims. But the structural parallel is precise enough that proving the general
+      CSS theorem &mdash; showing that <code>T = O(c<sub>test</sub> &middot; &Sigma; |S<sub>t</sub>| &middot; &delta;<sub>t</sub>)</code>
+      holds for all CSS instances satisfying Definition&nbsp;1 &mdash; is a well-defined and reachable open problem.
+      It is the primary open problem this work creates.
+    </p>
+  </section>
+
+  <hr class="divider">
+
+  <!-- ─── §8: SUMMARY OF CLAIMS BY SCOPE ──────────────────────────── -->
+  <section>
+    <div class="section-mark">§ 8 &mdash; The contribution, by scope</div>
+    <h2>What is universal, what is rank-<em>r</em> specific, what is conjectural.</h2>
+
+    <p>
+      Reduced to its components, the contribution decomposes into three categories. They have different evidentiary
+      status and should be cited differently.
+    </p>
+
+    <div class="scope-grid">
+
+      <div class="scope-card universal">
+        <div class="scope-card-tag">Universal</div>
+        <h4>Holds for any data</h4>
+        <ul>
+          <li>Heritage Lemma reframed as <em>d</em>-separation on event DAG</li>
+          <li>CT is a graphical model; CT.update is one message-passing step</li>
+          <li>Lemma 3: per-step cost independent of |F<sub>t</sub>|</li>
+          <li>Strict improvement over RIC whenever pruning occurs</li>
+        </ul>
+      </div>
+
+      <div class="scope-card scoped">
+        <div class="scope-card-tag">Scoped</div>
+        <h4>Requires rank <em>r</em> &lt;&lt; <em>d</em></h4>
+        <ul>
+          <li>Theorem 2: <em>O</em>(<em>nrd</em>), matching &Omega;(<em>nrd</em>)</li>
+          <li>Three Carath&eacute;odory bounds collapse the output-sensitive formula</li>
+          <li>Mass pruning at the final step (&rho;&nbsp;=&nbsp;0)</li>
+          <li>Confirmed for <em>r</em>&nbsp;&isin;&nbsp;{2,&nbsp;5,&nbsp;10,&nbsp;15,&nbsp;20}</li>
+        </ul>
+      </div>
+
+      <div class="scope-card conjectural">
+        <div class="scope-card-tag">Conjectural</div>
+        <h4>Open problems</h4>
+        <ul>
+          <li>Theorem 0 in full generality (CSS general theorem)</li>
+          <li>Delaunay triangulation as CSS instance</li>
+          <li>Hyperplane arrangements as CSS instance</li>
+          <li>Sparse matrix refactorisation as CSS instance</li>
+        </ul>
+      </div>
+
+    </div>
+
+    <p>
+      Citation hygiene matters here. The universal claims can be cited as established. The scoped claims should be
+      cited with their assumption (low-rank affine structure). The conjectural claims should be cited as open
+      problems, not as results.
+    </p>
+  </section>
+
+  <hr class="divider">
+
+  <!-- ─── §9: A PERSONAL NOTE ───────────────────────────────────────── -->
+  <section>
+    <div class="section-mark">§ 9 &mdash; A personal note</div>
+    <h2>Working at the intersection of fields.</h2>
+
+    <p>
+      The insight that the Heritage Lemma is a conditional independence statement came from looking at the same
+      structure in three different fields &mdash; sparse matrix factorisation, belief propagation, and convex hull
+      construction &mdash; and noticing that the same proof sketch worked in all three.
+    </p>
+
+    <p>
+      The computational geometry community has known the Heritage Lemma for thirty-five years. The machine learning
+      community has known <em>d</em>-separation on DAGs for almost as long. The numerical linear algebra community
+      has worked with elimination trees and sparse fill-in for decades. Nobody connected them because the fields
+      do not usually talk to each other, and because each community has its own vocabulary for what is structurally
+      the same idea.
+    </p>
+
+    <p>
+      That is the thing about working at the intersection of domains: the interesting results tend to live in the
+      gap between communities, not inside any one of them. The CSS framework is an attempt to name the gap, so that
+      the next person who recognises this pattern in their own field can cite it directly rather than rediscovering
+      it under another name.
+    </p>
+
+    <p>
+      I would like to hear from anyone working on Delaunay triangulation, sparse linear algebra, hyperplane arrangements,
+      or kinetic data structures who sees the CSS pattern in their own work. The general theorem is out there.
+      It is just waiting for someone to prove it.
+    </p>
+  </section>
+
+  <!-- ─── COLOPHON / RESOURCES ─────────────────────────────────────── -->
+  <div class="colophon">
+    <div class="colophon-title">Resources &amp; reading</div>
+    <dl>
+      <dt>Paper</dt>
+      <dd>
+        CT-QuickHull: Causal Sparsity on Ancestry DAGs for Exact Convex Hull Construction, v1.5.
+        <br>DOI: <a href="https://doi.org/10.5281/zenodo.XXXXXXX">10.5281/zenodo.XXXXXXX</a>
+      </dd>
+      <dt>Code</dt>
+      <dd>GitHub repository with Colab notebook (<code>ct_quickhull_smoke_test.py</code>) and all dependencies.</dd>
+      <dt>Open problem</dt>
+      <dd>Prove Theorem 0 (the CSS complexity formula) in full generality. Conjectured instances: Delaunay triangulation, hyperplane arrangements, sparse matrix refactorisation.</dd>
+      <dt>Contact</dt>
+      <dd>winstonsdodson@icloud.com &nbsp;&middot;&nbsp; ORCID <a href="https://orcid.org/0009-0001-7148-0764">0009-0001-7148-0764</a></dd>
+      <dt>License</dt>
+      <dd>This essay and the underlying paper are released under <a href="https://creativecommons.org/licenses/by/4.0/">Creative Commons Attribution 4.0 International (CC BY 4.0)</a>.</dd>
+    </dl>
+    <div class="signoff">
+      Comments, critique, and collaboration on the conjectured CSS instances welcome.<br>
+      Winston Dodson &nbsp;&middot;&nbsp; Independent Researcher &nbsp;&middot;&nbsp; April 2026
+    </div>
+  </div>
+
+</article>
+
+</body>
+</html>
